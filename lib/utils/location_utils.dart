@@ -25,3 +25,27 @@ Future<Position?> fetchCurrentLocation(BuildContext context) async {
     return null;
   }
 }
+
+Future<Position?> fetchLocationSilently() async {
+  try {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print('📴 BG: Location service disabled');
+      return null;
+    }
+
+    final permission = await Geolocator.checkPermission();
+    if (permission != LocationPermission.always &&
+        permission != LocationPermission.whileInUse) {
+      print('🚫 BG: Location permission not sufficient');
+      return null;
+    }
+
+    final position = await Geolocator.getCurrentPosition();
+    print('📍 BG: $position');
+    return position;
+  } catch (e) {
+    print('❌ BG Location error: $e');
+    return null;
+  }
+}

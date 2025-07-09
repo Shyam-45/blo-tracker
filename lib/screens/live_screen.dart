@@ -1,9 +1,187 @@
-// import 'package:flutter/material.dart';
-// import 'package:intl/intl.dart';
+import 'package:blo_tracker/models/live_entry_model.dart';
+import 'package:blo_tracker/screens/upload_details_screen.dart';
+import 'package:blo_tracker/services/tracking_manager.dart';
+import 'package:blo_tracker/utils/time_window_utils.dart';
+import 'package:blo_tracker/db/local_db.dart';
+import 'package:flutter/material.dart';
+
+class LiveScreen extends StatefulWidget {
+  const LiveScreen({super.key});
+
+  @override
+  State<LiveScreen> createState() => _LiveScreenState();
+}
+
+class _LiveScreenState extends State<LiveScreen> {
+  List<LiveEntry> _allEntries = [];
+  String? _lastLocationText;
+  String _formatTime(DateTime dt) {
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return "$hour:$minute";
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEntries();
+  }
+
+  Future<void> _loadEntries() async {
+    final db = LocalDatabase.instance;
+    final now = DateTime.now();
+    final entries = await db.getEntriesForDate(now);
+    print("📥 Loaded ${entries.length} entries for today");
+
+    final lastSubmitted = entries.where((e) => e.isSubmitted).fold<LiveEntry?>(
+      null,
+      (prev, curr) {
+        if (prev == null) return curr;
+        return curr.timeSlot.isAfter(prev.timeSlot) ? curr : prev;
+      },
+    );
+
+    setState(() {
+      _allEntries = entries;
+      // _lastLocationText = lastSubmitted != null
+      // ? "${lastSubmitted.latitude?.toStringAsFixed(5)}, ${lastSubmitted.longitude?.toStringAsFixed(5)}"
+      // : "Not yet updated";
+      _lastLocationText = lastSubmitted != null
+          ? "${lastSubmitted.latitude?.toStringAsFixed(5)}, ${lastSubmitted.longitude?.toStringAsFixed(5)} at ${_formatTime(lastSubmitted.timeSlot)}"
+          : "Not yet updated";
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final timeWindows = getTimeWindows(now);
+
+    List<Widget> pastWidgets = [];
+    List<Widget> upcomingWidgets = [];
+
+    for (final window in timeWindows) {
+      final existingEntry = _allEntries.firstWhere(
+        (e) =>
+            e.timeSlot.hour == window.start.hour &&
+            e.timeSlot.minute == window.start.minute,
+        orElse: () => LiveEntry(
+          timeSlot: window.start,
+          isSubmitted: false,
+          isMissed: false,
+        ),
+      );
+
+      final isSubmitted = existingEntry.isSubmitted;
+      final isMissed = existingEntry.isMissed;
+
+      if (isSubmitted || isMissed) {
+        pastWidgets.add(_buildPastEntryTile(window, isSubmitted));
+      } else if (now.isAfter(window.end)) {
+        pastWidgets.add(_buildPastEntryTile(window, false)); // missed
+      } else {
+        final active = now.isAfter(window.start) && now.isBefore(window.end);
+        upcomingWidgets.add(_buildUpcomingTile(window, active: active));
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadEntries,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.my_location, color: Colors.blue),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Last Updated Location: $_lastLocationText",
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              // TrackingManager.triggerOneTimeResume();
+              TrackingManager.triggerOneTimeResume();
+            },
+            child: Text("Trigger Now"),
+          ),
+
+          if (upcomingWidgets.isNotEmpty) ...[
+            Text(
+              "Upcoming Entries",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            ...upcomingWidgets,
+            const SizedBox(height: 20),
+          ],
+          Text("Past Entries", style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          ...pastWidgets,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingTile(TimeWindow window, {required bool active}) {
+    return Card(
+      elevation: 3,
+      child: ListTile(
+        leading: const Icon(Icons.access_time),
+        title: Text(window.label),
+        subtitle: Text(active ? "You can update now" : "Scheduled for later"),
+        trailing: active
+            ? ElevatedButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UploadDetailsScreen(window: window),
+                    ),
+                  );
+                  if (result == true) {
+                    _loadEntries();
+                  }
+                },
+                child: const Text("Update Details"),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildPastEntryTile(TimeWindow window, bool isSubmitted) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          isSubmitted ? Icons.check_circle : Icons.cancel,
+          color: isSubmitted ? Colors.green : Colors.red,
+        ),
+        title: Text(window.label),
+        subtitle: Text(isSubmitted ? "Details submitted" : "Missed slot"),
+      ),
+    );
+  }
+}
+
 // import 'package:blo_tracker/models/live_entry_model.dart';
 // import 'package:blo_tracker/screens/upload_details_screen.dart';
 // import 'package:blo_tracker/utils/time_window_utils.dart';
 // import 'package:blo_tracker/db/local_db.dart';
+// import 'package:flutter/material.dart';
 
 // class LiveScreen extends StatefulWidget {
 //   const LiveScreen({super.key});
@@ -13,8 +191,8 @@
 // }
 
 // class _LiveScreenState extends State<LiveScreen> {
-//   List<LiveEntry> _entries = [];
-//   LiveEntry? _lastUpdatedEntry;
+//   List<LiveEntry> _allEntries = [];
+//   String? _lastLocationText;
 
 //   @override
 //   void initState() {
@@ -23,278 +201,147 @@
 //   }
 
 //   Future<void> _loadEntries() async {
-//     final allEntries = await LocalDb.getEntriesForToday();
+//     final db = LocalDatabase.instance;
 //     final now = DateTime.now();
+//     final entries = await db.getEntriesForDate(now);
+//     print("📥 Loaded ${entries.length} entries for today");
+
+//     // Get last submitted location
+//     final lastSubmitted = entries
+//         .where((e) => e.isSubmitted)
+//         .fold<LiveEntry?>(null, (prev, curr) {
+//       if (prev == null) return curr;
+//       return curr.timeSlot.isAfter(prev.timeSlot) ? curr : prev;
+//     });
 
 //     setState(() {
-//       _entries = allEntries;
-//       _lastUpdatedEntry = allEntries
-//           .where((e) => e.isSubmitted)
-//           .fold<LiveEntry?>(null, (prev, current) {
-//             if (prev == null) return current;
-//             return current.timeSlot.isAfter(prev.timeSlot) ? current : prev;
-//           });
+//       _allEntries = entries;
+//       _lastLocationText = lastSubmitted != null
+//           ? "${lastSubmitted.latitude?.toStringAsFixed(5)}, ${lastSubmitted.longitude?.toStringAsFixed(5)}"
+//           : "Not yet updated";
 //     });
 //   }
-
-//   // void _navigateToUpload(TimeWindow window) async {
-//   //   final result = await Navigator.push(
-//   //     context,
-//   //     MaterialPageRoute(
-//   //       builder: (_) => UploadDetailsScreen(timeWindow: window),
-//   //     ),
-//   //   );
-
-//   //   if (result == true) {
-//   //     _loadEntries(); // Refresh entries
-//   //   }
-//   // }
 
 //   @override
 //   Widget build(BuildContext context) {
 //     final now = DateTime.now();
-//     final allWindows = getTimeWindows(now);
+//     final timeWindows = getTimeWindows(now);
 
-//     final past = allWindows.where((w) => w.end.isBefore(now)).toList();
-//     final future = allWindows.where((w) => w.start.isAfter(now)).toList();
-//     final currentWindow = getCurrentAllowedWindow(now);
+//     List<Widget> pastWidgets = [];
+//     Widget? upcomingWidget;
 
-//     return Scaffold(
-//       appBar: AppBar(title: const Text('Live Tracker')),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             if (_lastUpdatedEntry != null)
-//               Container(
-//                 padding: const EdgeInsets.all(12),
-//                 margin: const EdgeInsets.only(bottom: 16),
-//                 decoration: BoxDecoration(
-//                   border: Border.all(color: Colors.blueAccent),
-//                   borderRadius: BorderRadius.circular(8),
-//                 ),
-//                 child: Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     const Text(
-//                       "Last Updated Location",
-//                       style: TextStyle(
-//                         fontWeight: FontWeight.bold,
-//                         fontSize: 16,
-//                       ),
-//                     ),
-//                     const SizedBox(height: 8),
-//                     Text(
-//                       "Latitude: ${_lastUpdatedEntry!.latitude?.toStringAsFixed(4) ?? 'N/A'}",
-//                     ),
-//                     Text(
-//                       "Longitude: ${_lastUpdatedEntry!.longitude?.toStringAsFixed(4) ?? 'N/A'}",
-//                     ),
-//                     Text(
-//                       "Time: ${DateFormat('hh:mm a').format(_lastUpdatedEntry!.timeSlot)}",
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//             if (currentWindow != null)
-//               Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(
-//                     "Current Active Slot: ${currentWindow.label}",
-//                     style: const TextStyle(
-//                       fontSize: 16,
-//                       fontWeight: FontWeight.w600,
-//                     ),
-//                   ),
-//                   const SizedBox(height: 8),
-//                   ElevatedButton.icon(
-//                     // onPressed: () => _navigateToUpload(currentWindow),
-//                     icon: const Icon(Icons.edit_location_alt),
-//                     label: const Text("Upload Details"),
-//                   ),
-//                   const SizedBox(height: 20),
-//                 ],
-//               ),
-//             const Text(
-//               "Upcoming Entries",
-//               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-//             ),
-//             const SizedBox(height: 10),
-//             ...future.map(
-//               (slot) => ListTile(
-//                 title: Text(slot.label),
-//                 subtitle: const Text("Not available yet"),
-//                 trailing: const Icon(Icons.schedule),
-//               ),
-//             ),
-//             const SizedBox(height: 20),
-//             const Text(
-//               "Past Entries",
-//               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-//             ),
-//             const SizedBox(height: 10),
-//             ...past.map((slot) {
-//               final entry = _entries.firstWhere(
-//                 (e) => e.timeSlot.hour == slot.start.hour,
-//                 orElse: () => LiveEntry(
-//                   timeSlot: slot.start,
-//                   isSubmitted: false,
-//                   isMissed: true,
-//                 ),
-//               );
-//               return ListTile(
-//                 title: Text(slot.label),
-//                 subtitle: Text(entry.isSubmitted ? "Done" : "Missed"),
-//                 trailing: Icon(
-//                   entry.isSubmitted ? Icons.check_circle : Icons.cancel,
-//                   color: entry.isSubmitted ? Colors.green : Colors.red,
-//                 ),
-//               );
-//             }),
-//           ],
+//     for (final window in timeWindows) {
+//       final existingEntry = _allEntries.firstWhere(
+//         (e) =>
+//             e.timeSlot.hour == window.start.hour &&
+//             e.timeSlot.minute == window.start.minute,
+//         orElse: () => LiveEntry(
+//           timeSlot: window.start,
+//           isSubmitted: false,
+//           isMissed: false,
 //         ),
+//       );
+
+//       final isSubmitted = existingEntry.isSubmitted;
+//       final isMissed = existingEntry.isMissed;
+
+//       if (isSubmitted || isMissed) {
+//         pastWidgets.add(_buildPastEntryTile(window, isSubmitted));
+//       } else if (now.isAfter(window.end)) {
+//         pastWidgets.add(_buildPastEntryTile(window, false)); // missed
+//       } else if (now.isAfter(window.start) && now.isBefore(window.end)) {
+//         upcomingWidget = _buildUpcomingTile(window, active: true);
+//         break;
+//       } else if (now.isBefore(window.start) && upcomingWidget == null) {
+//         upcomingWidget = _buildUpcomingTile(window, active: false);
+//         break;
+//       }
+//     }
+
+//     return RefreshIndicator(
+//       onRefresh: _loadEntries,
+//       child: ListView(
+//         padding: const EdgeInsets.all(16),
+//         children: [
+//           Container(
+//             padding: const EdgeInsets.all(16),
+//             decoration: BoxDecoration(
+//               color: Colors.blue[50],
+//               borderRadius: BorderRadius.circular(12),
+//               border: Border.all(color: Colors.blue),
+//             ),
+//             child: Row(
+//               children: [
+//                 const Icon(Icons.my_location, color: Colors.blue),
+//                 const SizedBox(width: 10),
+//                 Expanded(
+//                   child: Text(
+//                     "Last Updated Location: $_lastLocationText",
+//                     style: const TextStyle(fontWeight: FontWeight.w500),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//           const SizedBox(height: 24),
+//           if (upcomingWidget != null) ...[
+//             Text(
+//               "Upcoming Entry",
+//               style: Theme.of(context).textTheme.titleMedium,
+//             ),
+//             const SizedBox(height: 10),
+//             upcomingWidget,
+//             const SizedBox(height: 20),
+//           ],
+//           Text(
+//             "Past Entries",
+//             style: Theme.of(context).textTheme.titleMedium,
+//           ),
+//           const SizedBox(height: 10),
+//           ...pastWidgets,
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildUpcomingTile(TimeWindow window, {required bool active}) {
+//     return Card(
+//       elevation: 3,
+//       child: ListTile(
+//         leading: const Icon(Icons.access_time),
+//         title: Text(window.label),
+//         subtitle: Text(active ? "You can update now" : "Scheduled for later"),
+//         trailing: active
+//             ? ElevatedButton(
+//                 onPressed: () async {
+//                   final result = await Navigator.push(
+//                     context,
+//                     MaterialPageRoute(
+//                       builder: (_) => UploadDetailsScreen(window: window),
+//                     ),
+//                   );
+//                   if (result == true) {
+//                     _loadEntries();
+//                   }
+//                 },
+//                 child: const Text("Update Details"),
+//               )
+//             : null,
+//       ),
+//     );
+//   }
+
+//   Widget _buildPastEntryTile(TimeWindow window, bool isSubmitted) {
+//     return Card(
+//       child: ListTile(
+//         leading: Icon(
+//           isSubmitted ? Icons.check_circle : Icons.cancel,
+//           color: isSubmitted ? Colors.green : Colors.red,
+//         ),
+//         title: Text(window.label),
+//         subtitle:
+//             Text(isSubmitted ? "Details submitted" : "Missed slot"),
 //       ),
 //     );
 //   }
 // }
-
-import 'package:blo_tracker/utils/time_window_utils.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../screens/upload_details_screen.dart';
-
-class LiveScreen extends StatefulWidget {
-  const LiveScreen({Key? key}) : super(key: key);
-
-  @override
-  State<LiveScreen> createState() => _LiveScreenState();
-}
-
-class _LiveScreenState extends State<LiveScreen> {
-  String? lastLocation;
-  List<String> completedSlots = [];
-  DateTime now = DateTime.now();
-  TimeWindow? currentWindow;
-
-  @override
-  void initState() {
-    super.initState();
-    loadLastLocation();
-    currentWindow = getCurrentAllowedWindow(now);
-  }
-
-  Future<void> loadLastLocation() async {
-    final prefs = await SharedPreferences.getInstance();
-    final location = prefs.getString('last_location_sent');
-    final completed = prefs.getStringList('completed_slots') ?? [];
-    setState(() {
-      lastLocation = location;
-      completedSlots = completed;
-    });
-  }
-
-  Future<void> saveCompletedSlot(String label) async {
-    final prefs = await SharedPreferences.getInstance();
-    completedSlots.add(label);
-    await prefs.setStringList('completed_slots', completedSlots);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final timeWindows = getTimeWindows(now);
-
-    final upcoming = timeWindows
-        .where((w) => now.isBefore(w.end) && !completedSlots.contains(w.label))
-        .toList();
-
-    final past = timeWindows
-        .where((w) => now.isAfter(w.end))
-        .map(
-          (w) => {
-            'label': w.label,
-            'status': completedSlots.contains(w.label) ? 'Done' : 'Missed',
-          },
-        )
-        .toList();
-
-    return Scaffold(
-      appBar: AppBar(title: const Text("Live Tracker")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Last Updated Location:",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(lastLocation ?? 'No location sent yet.'),
-            const Divider(height: 30),
-            if (currentWindow != null &&
-                !completedSlots.contains(currentWindow!.label))
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Active Entry: ${currentWindow!.label}",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              UploadDetailsScreen(label: currentWindow!.label),
-                        ),
-                      );
-                      if (result != null && result == 'uploaded') {
-                        await saveCompletedSlot(currentWindow!.label);
-                        await loadLastLocation();
-                      }
-                    },
-                    child: const Text("Update Details"),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 20),
-            const Text(
-              "Upcoming Entries:",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            ...upcoming.map(
-              (w) => ListTile(
-                title: Text(w.label),
-                trailing: const Icon(Icons.access_time),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "Past Entries:",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            ...past.map(
-              (e) => ListTile(
-                title: Text(e['label']!),
-                trailing: Text(
-                  e['status']!,
-                  style: TextStyle(
-                    color: e['status'] == 'Done' ? Colors.green : Colors.red,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

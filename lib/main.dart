@@ -1,12 +1,39 @@
-import 'package:blo_tracker/screens/live_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/permission_required_screen.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:blo_tracker/screens/splash_screen.dart';
+import 'package:blo_tracker/screens/login_screen.dart';
+import 'package:blo_tracker/screens/home_screen.dart';
+import 'package:blo_tracker/screens/permission_required_screen.dart';
+import 'package:blo_tracker/screens/live_screen.dart';
+import 'package:blo_tracker/services/location_uploader.dart';
 
-void main() {
+// Constants for task names
+const String periodicTaskName = 'location_upload_task';
+const String oneTimeTaskName = 'resume_location_task';
+const String testTaskName = 'testTask';
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((taskName, inputData) async {
+    print("📦 Workmanager triggered: $taskName");
+
+    if (taskName == periodicTaskName || taskName == oneTimeTaskName) {
+      print("📍 LocationUploader.sendLocationIfAllowed() called");
+      await LocationUploader.sendLocationIfAllowed();
+    } else if (taskName == testTaskName) {
+      print("🚀 Test task executed!");
+    }
+
+    return Future.value(true);
+  });
+}
+
+@pragma('vm:entry-point')
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -24,7 +51,7 @@ class MyApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/home': (_) => const HomeScreen(),
         '/permission': (_) => const PermissionRequiredScreen(),
-        '/live': (context) => const LiveScreen(),
+        '/live': (_) => const LiveScreen(),
       },
     );
   }

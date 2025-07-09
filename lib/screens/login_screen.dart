@@ -48,7 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           return;
         }
       }
-if (!context.mounted) return;
+      if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       ScaffoldMessenger.of(
