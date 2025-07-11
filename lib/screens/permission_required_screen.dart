@@ -1,24 +1,25 @@
+// lib/screens/permission_required_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:blo_tracker/services/tracking_manager.dart';
+import 'package:blo_tracker/services/background_service.dart';
 
 class PermissionRequiredScreen extends StatefulWidget {
   const PermissionRequiredScreen({super.key});
 
   @override
-  State<PermissionRequiredScreen> createState() =>
-      _PermissionRequiredScreenState();
+  State<PermissionRequiredScreen> createState() => _PermissionRequiredScreenState();
 }
 
-class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
-    with WidgetsBindingObserver {
-  bool _hasStartedTracking = false;
+class _PermissionRequiredScreenState extends State<PermissionRequiredScreen> with WidgetsBindingObserver {
+  bool _hasStarted = false;
+
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkPermissionAndProceed(); // ⏱️ Optional: auto-check if resumed doesn't fire
+    _checkPermissionAndProceed();
   }
 
   @override
@@ -36,17 +37,15 @@ class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
 
   Future<void> _checkPermissionAndProceed() async {
     final permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.always && !_hasStartedTracking) {
-      print("🟢 Background permission granted!");
 
-      _hasStartedTracking = true; // prevent duplicate calls
-
-      await TrackingManager.registerPeriodicLocationTask();
-
+    if (permission == LocationPermission.always && !_hasStarted) {
+      _hasStarted = true;
+      print("✅ Background permission granted");
+      await initializeBackgroundService(); // ✅ Start service if permission is granted
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } else {
-      print("🔴 Background permission NOT granted yet.");
+      print("🔴 Background permission NOT granted");
     }
   }
 
@@ -56,6 +55,7 @@ class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
 
   @override
   Widget build(BuildContext context) {
+      print("permission screen called");
     return Scaffold(
       appBar: AppBar(title: const Text("Permission Required")),
       body: Padding(
@@ -83,6 +83,97 @@ class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
     );
   }
 }
+
+
+// import 'package:flutter/material.dart';
+// import 'package:geolocator/geolocator.dart';
+// import 'package:blo_tracker/services/tracking_manager.dart';
+// import 'package:flutter_background_service_android/flutter_background_service_android.dart';
+
+// class PermissionRequiredScreen extends StatefulWidget {
+//   const PermissionRequiredScreen({super.key});
+
+//   @override
+//   State<PermissionRequiredScreen> createState() =>
+//       _PermissionRequiredScreenState();
+// }
+
+// class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
+//     with WidgetsBindingObserver {
+//   bool _hasStartedTracking = false;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     WidgetsBinding.instance.addObserver(this);
+//     _checkPermissionAndProceed(); // ⏱️ Optional: auto-check if resumed doesn't fire
+//   }
+
+//   @override
+//   void dispose() {
+//     WidgetsBinding.instance.removeObserver(this);
+//     super.dispose();
+//   }
+
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//     if (state == AppLifecycleState.resumed) {
+//       _checkPermissionAndProceed();
+//     }
+//   }
+
+//   Future<void> _checkPermissionAndProceed() async {
+//     final permission = await Geolocator.checkPermission();
+//     if (permission == LocationPermission.always && !_hasStartedTracking) {
+//       print("🟢 Background permission granted!");
+
+//       _hasStartedTracking = true; // prevent duplicate calls
+
+//       // await TrackingManager.registerPeriodicLocationTask();
+//       // await TrackingManager.triggerOneTimeResume();
+//       await ForegroundServiceController.startService();
+//       if (!mounted) return;
+//       Navigator.pushReplacementNamed(context, '/home');
+//     } else {
+//       print("🔴 Background permission NOT granted yet.");
+//     }
+//   }
+
+//   Future<void> _openSettings() async {
+//     await Geolocator.openAppSettings();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: const Text("Permission Required")),
+//       body: Padding(
+//         padding: const EdgeInsets.all(20),
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: [
+//             const Icon(Icons.location_on, size: 80, color: Colors.red),
+//             const SizedBox(height: 20),
+//             const Text(
+//               "To continue, you must allow background location access:\n\n"
+//               "Go to App Settings → Permissions → Location → Allow all the time",
+//               style: TextStyle(fontSize: 16),
+//               textAlign: TextAlign.center,
+//             ),
+//             const SizedBox(height: 30),
+//             ElevatedButton.icon(
+//               onPressed: _openSettings,
+//               icon: const Icon(Icons.settings),
+//               label: const Text("Open App Settings"),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
 
 // import 'package:flutter/material.dart';
 // import 'package:geolocator/geolocator.dart';

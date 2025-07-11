@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:blo_tracker/providers/app_state_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:blo_tracker/providers/location_provider.dart';
 
 class UploadDetailsScreen extends ConsumerStatefulWidget {
   final TimeWindow window;
@@ -105,6 +107,9 @@ class _UploadDetailsScreenState extends ConsumerState<UploadDetailsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("✅ Entry submitted successfully")),
     );
+    // ref
+    //     .read(lastLocationProvider.notifier)
+    //     .updateLocation(_latitude!, _longitude!, DateTime.now());
     setState(() => _submitting = false);
     Navigator.pop(context, true);
   }
@@ -184,7 +189,10 @@ class _UploadDetailsScreenState extends ConsumerState<UploadDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Location", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Location",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     _latitude != null
@@ -195,7 +203,9 @@ class _UploadDetailsScreenState extends ConsumerState<UploadDetailsScreen> {
                   ElevatedButton.icon(
                     onPressed: _fetchingLocation ? null : _fetchLocation,
                     icon: const Icon(Icons.my_location),
-                    label: Text(_fetchingLocation ? "Fetching..." : "Fetch Location"),
+                    label: Text(
+                      _fetchingLocation ? "Fetching..." : "Fetch Location",
+                    ),
                   ),
                 ],
               ),
@@ -204,7 +214,8 @@ class _UploadDetailsScreenState extends ConsumerState<UploadDetailsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_image != null &&
+                onPressed:
+                    (_image != null &&
                         _latitude != null &&
                         _longitude != null &&
                         !_fetchingLocation &&
