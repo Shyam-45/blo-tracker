@@ -1,3 +1,5 @@
+import 'package:blo_tracker/widgets/custom_card.dart';
+import 'package:blo_tracker/widgets/status_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:blo_tracker/services/tracking_manager.dart';
@@ -11,19 +13,42 @@ class PermissionRequiredScreen extends StatefulWidget {
 }
 
 class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   bool _hasStartedTracking = false;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkPermissionAndProceed(); // ⏱️ Optional: auto-check if resumed doesn't fire
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+    _checkPermissionAndProceed();
+    _animationController.forward();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -37,16 +62,10 @@ class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
   Future<void> _checkPermissionAndProceed() async {
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.always && !_hasStartedTracking) {
-      print("🟢 Background permission granted!");
-
-      _hasStartedTracking = true; // prevent duplicate calls
-
+      _hasStartedTracking = true;
       await TrackingManager.registerPeriodicLocationTask();
-
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      print("🔴 Background permission NOT granted yet.");
     }
   }
 
@@ -56,116 +75,173 @@ class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      appBar: AppBar(title: const Text("Permission Required")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.location_on, size: 80, color: Colors.red),
-            const SizedBox(height: 20),
-            const Text(
-              "To continue, you must allow background location access:\n\n"
-              "Go to App Settings → Permissions → Location → Allow all the time",
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.colorScheme.error.withOpacity(0.1),
+              theme.colorScheme.error.withOpacity(0.05),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Warning Icon
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.error,
+                        borderRadius: BorderRadius.circular(60),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.error.withOpacity(0.3),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.location_off,
+                        size: 60,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Title
+                    Text(
+                      "Location Permission Required",
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Description Card
+                    CustomCard(
+                      child: Column(
+                        children: [
+                          StatusIndicator(
+                            status: StatusType.warning,
+                            text: "Background location access needed",
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "To continue, you must allow background location access:",
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Steps to enable:",
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                ...[
+                                  "1. Tap 'Open App Settings' below",
+                                  "2. Go to Permissions → Location",
+                                  "3. Select 'Allow all the time'",
+                                  "4. Return to the app",
+                                ].map((step) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        margin: const EdgeInsets.only(top: 8, right: 8),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary,
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          step,
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: _openSettings,
+                        icon: const Icon(Icons.settings),
+                        label: const Text(
+                          "Open App Settings",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Info Text
+                    Text(
+                      "This permission is required for the app to function properly and track your field activities.",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              onPressed: _openSettings,
-              icon: const Icon(Icons.settings),
-              label: const Text("Open App Settings"),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
-
-// import 'package:flutter/material.dart';
-// import 'package:geolocator/geolocator.dart';
-// import 'package:blo_tracker/services/tracking_manager.dart';
-
-// class PermissionRequiredScreen extends StatefulWidget {
-//   const PermissionRequiredScreen({super.key});
-
-//   @override
-//   State<PermissionRequiredScreen> createState() => _PermissionRequiredScreenState();
-// }
-
-// class _PermissionRequiredScreenState extends State<PermissionRequiredScreen>
-//     with WidgetsBindingObserver {
-
-//   bool _isProcessing = false;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     WidgetsBinding.instance.addObserver(this);
-//   }
-
-//   @override
-//   void dispose() {
-//     WidgetsBinding.instance.removeObserver(this);
-//     super.dispose();
-//   }
-
-//   @override
-//   void didChangeAppLifecycleState(AppLifecycleState state) async {
-//     if (state == AppLifecycleState.resumed && !_isProcessing) {
-//       _isProcessing = true;
-
-//       final permission = await Geolocator.checkPermission();
-//       if (permission == LocationPermission.always) {
-//         print("🟢 Background permission granted!");
-
-//         // ✅ Register periodic background tracking task
-//         await TrackingManager.registerPeriodicLocationTask();
-
-//         if (!mounted) return;
-//         Navigator.pushReplacementNamed(context, '/home');
-//       } else {
-//         print("🔴 Background permission NOT granted yet.");
-//       }
-
-//       _isProcessing = false;
-//     }
-//   }
-
-//   Future<void> _openSettings() async {
-//     await Geolocator.openAppSettings();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: const Text("Background Permission Required")),
-//       body: Padding(
-//         padding: const EdgeInsets.all(20),
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             const Icon(Icons.location_on, size: 80, color: Colors.red),
-//             const SizedBox(height: 20),
-//             const Text(
-//               "This app needs background location access to function properly.\n\n"
-//               "We use it to record your location automatically every 30 minutes "
-//               "during working hours (9:00 AM – 6:00 PM), so that your field activity can be tracked accurately.\n\n"
-//               "You will not be tracked outside work hours or on Sundays.",
-//               style: TextStyle(fontSize: 16),
-//               textAlign: TextAlign.center,
-//             ),
-//             const SizedBox(height: 30),
-//             ElevatedButton.icon(
-//               onPressed: _openSettings,
-//               icon: const Icon(Icons.settings),
-//               label: const Text("Open App Settings"),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }

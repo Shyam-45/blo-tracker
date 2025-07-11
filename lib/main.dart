@@ -7,6 +7,7 @@ import 'package:blo_tracker/screens/home_screen.dart';
 import 'package:blo_tracker/screens/permission_required_screen.dart';
 import 'package:blo_tracker/screens/live_screen.dart';
 import 'package:blo_tracker/services/location_uploader.dart';
+import 'package:blo_tracker/theme/app_theme.dart';
 
 // Constants for task names
 const String periodicTaskName = 'location_upload_task';
@@ -45,6 +46,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'BLO Survey',
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
         '/': (_) => const SplashScreen(),
