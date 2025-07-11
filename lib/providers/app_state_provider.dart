@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blo_tracker/models/app_state.dart';
 import 'package:blo_tracker/services/user_db_service.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 
 class AppStateNotifier extends StateNotifier<AppState> {
   AppStateNotifier() : super(AppState.initial()) {
@@ -38,6 +39,9 @@ class AppStateNotifier extends StateNotifier<AppState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await UserDatabaseService.deleteUser(); // clear profile
+    FlutterBackgroundService().invoke('stopService');
+print("🛑 Background service stopped due to logout");
+
     state = AppState.initial();
   }
 }

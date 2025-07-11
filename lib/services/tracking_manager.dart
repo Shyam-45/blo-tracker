@@ -19,6 +19,7 @@ class TrackingManager {
       backoffPolicy: BackoffPolicy.exponential,
       backoffPolicyDelay: const Duration(minutes: 2),
     );
+    print("🔁🔁🔁🔁🔁DONE");
   }
 
   /// Trigger one-time task when resuming mid-day
@@ -53,8 +54,8 @@ class TrackingManager {
   /// Calculate delay to align with next 30-min mark
   static Duration _calculateInitialDelay() {
     // 🔁 Adjusted for testing (1 minute delay)
-    const delay = Duration(minutes: 1);
-    print("⏱️ [TEST] Initial delay: ${delay.inMinutes} min");
+    const delay = Duration(seconds: 5);
+    print("⏱️ [TEST] Initial delay: ${delay.inSeconds} sec");
     return delay;
 
     // 🔁 Production version:
