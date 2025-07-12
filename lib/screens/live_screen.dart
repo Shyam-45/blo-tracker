@@ -156,12 +156,12 @@ class _LiveScreenState extends State<LiveScreen> {
           ),
           const SizedBox(height: 24),
 
-          ElevatedButton(
-            onPressed: () {
-              TrackingManager.triggerOneTimeResume();
-            },
-            child: const Text("Trigger Now"),
-          ),
+          // ElevatedButton(
+          //   onPressed: () {
+          //     TrackingManager.triggerOneTimeResume();
+          //   },
+          //   child: const Text("Trigger Now"),
+          // ),
 
           const SizedBox(height: 10),
           ElevatedButton.icon(

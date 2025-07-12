@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-class UploadService {
-  static const String baseUrl = "http://192.168.126.251:5000"; // Replace if needed
+import 'package:blo_tracker/services/session_manager.dart'; // 🔑 for userId
 
-  /// 🔼 Upload image entry to backend
+class UploadService {
+  static const String baseUrl = "http://192.168.126.251:5000";
+
   static Future<bool> uploadEntry({
     required File imageFile,
     required double latitude,
@@ -15,10 +16,18 @@ class UploadService {
   }) async {
     final url = Uri.parse("$baseUrl/api/blo/send-image");
 
+    final bloUserId = SessionManager.currentUser?.userId;
+
+    if (bloUserId == null) {
+      print("❌ BLO UserId is null. User might not be logged in.");
+      return false;
+    }
+
     print("📤 Uploading image entry...");
     print("🗂️ TimeSlot: $timeSlot");
     print("📍 Location: $latitude, $longitude");
     print("🖼️ Image path: ${imageFile.path}");
+    print("👤 BLO UserId: $bloUserId");
     print("🔐 Token: $token");
 
     try {
@@ -26,6 +35,7 @@ class UploadService {
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['latitude'] = latitude.toString()
         ..fields['longitude'] = longitude.toString()
+        ..fields['bloUserId'] = bloUserId
         ..fields['timeSlot'] = timeSlot.toIso8601String()
         ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
 
@@ -90,6 +100,148 @@ class UploadService {
     }
   }
 }
+
+// import 'dart:convert';
+// import 'dart:io';
+// import 'package:http/http.dart' as http;
+
+// class UploadService {
+//   static const String baseUrl =
+//       "http://192.168.126.251:5000"; // Replace if needed
+
+//   static Future<bool> uploadEntry({
+//     required File imageFile,
+//     required double latitude,
+//     required double longitude,
+//     required DateTime timeSlot,
+//     // required String bloUserId, // 👈 add this
+//     required String token,
+//   }) async {
+//     final url = Uri.parse("$baseUrl/api/blo/send-image");
+
+//     final bloUserId = 
+
+//     print("📤 Uploading image entry...");
+//     print("🗂️ TimeSlot: $timeSlot");
+//     print("📍 Location: $latitude, $longitude");
+//     print("🖼️ Image path: ${imageFile.path}");
+//     print("👤 BLO UserId: $bloUserId");
+//     print("🔐 Token: $token");
+
+//     try {
+//       final request = http.MultipartRequest("POST", url)
+//         ..headers['Authorization'] = 'Bearer $token'
+//         ..fields['latitude'] = latitude.toString()
+//         ..fields['longitude'] = longitude.toString()
+//         ..fields['bloUserId'] =
+//             bloUserId // 👈 send this
+//         ..fields['timeSlot'] = timeSlot
+//             .toIso8601String() // optional
+//         ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+//       final streamedResponse = await request.send();
+//       final response = await http.Response.fromStream(streamedResponse);
+
+//       print("📡 Upload response: ${response.statusCode}");
+//       print("📄 Body: ${response.body}");
+
+//       if (response.statusCode == 200) {
+//         final body = json.decode(response.body);
+//         return body['success'] == true;
+//       } else {
+//         return false;
+//       }
+//     } catch (e) {
+//       print("❌ Upload failed: $e");
+//       return false;
+//     }
+//   }
+
+  // /// 🔼 Upload image entry to backend
+  // static Future<bool> uploadEntry({
+  //   required File imageFile,
+  //   required double latitude,
+  //   required double longitude,
+  //   required DateTime timeSlot,
+  //   required String token,
+  // }) async {
+  //   final url = Uri.parse("$baseUrl/api/blo/send-image");
+
+  //   print("📤 Uploading image entry...");
+  //   print("🗂️ TimeSlot: $timeSlot");
+  //   print("📍 Location: $latitude, $longitude");
+  //   print("🖼️ Image path: ${imageFile.path}");
+  //   print("🔐 Token: $token");
+
+  //   try {
+  //     final request = http.MultipartRequest("POST", url)
+  //       ..headers['Authorization'] = 'Bearer $token'
+  //       ..fields['latitude'] = latitude.toString()
+  //       ..fields['longitude'] = longitude.toString()
+  //       ..fields['timeSlot'] = timeSlot.toIso8601String()
+  //       ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+  //     final streamedResponse = await request.send();
+  //     final response = await http.Response.fromStream(streamedResponse);
+
+  //     print("📡 Upload response: ${response.statusCode}");
+  //     print("📄 Body: ${response.body}");
+
+  //     if (response.statusCode == 200) {
+  //       final body = json.decode(response.body);
+  //       return body['success'] == true;
+  //     } else {
+  //       return false;
+  //     }
+  //   } catch (e) {
+  //     print("❌ Upload failed: $e");
+  //     return false;
+  //   }
+  // }
+
+//   /// 📡 Send background location to backend
+//   static Future<bool> sendBackgroundLocation({
+//     required double latitude,
+//     required double longitude,
+//     required DateTime timestamp,
+//     required String token,
+//   }) async {
+//     final url = Uri.parse("$baseUrl/api/blo/send-location");
+
+//     print("📡 Sending background location...");
+//     print("🕓 Timestamp: $timestamp");
+//     print("📍 Location: $latitude, $longitude");
+//     print("🔐 Token: $token");
+
+//     try {
+//       final response = await http.post(
+//         url,
+//         headers: {
+//           'Authorization': 'Bearer $token',
+//           'Content-Type': 'application/json',
+//         },
+//         body: jsonEncode({
+//           'latitude': latitude,
+//           'longitude': longitude,
+//           'timestamp': timestamp.toIso8601String(),
+//         }),
+//       );
+
+//       print("📡 Location response: ${response.statusCode}");
+//       print("📄 Body: ${response.body}");
+
+//       if (response.statusCode == 200) {
+//         final body = json.decode(response.body);
+//         return body['success'] == true;
+//       } else {
+//         return false;
+//       }
+//     } catch (e) {
+//       print("❌ Background location upload error: $e");
+//       return false;
+//     }
+//   }
+// }
 
 
 

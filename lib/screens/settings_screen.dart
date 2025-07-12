@@ -48,8 +48,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool isWithinAllowedTrackingWindow() {
     final now = DateTime.now();
     final isSunday = now.weekday == DateTime.sunday;
-    final start = DateTime(now.year, now.month, now.day, 0, 0);
-    final end = DateTime(now.year, now.month, now.day, 18, 30);
+    final start = DateTime(now.year, now.month, now.day, 8, 45);
+    final end = DateTime(now.year, now.month, now.day, 18, 15);
     return !isSunday && now.isAfter(start) && now.isBefore(end);
   }
 
@@ -59,7 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!isWithinAllowedTrackingWindow()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Tracking can only be toggled between 9:00 AM and 6:30 PM (Mon–Sat)."),
+          content: Text("Tracking can only be toggled between 8:45 AM and 6:15 PM (Mon–Sat)."),
         ),
       );
       return;
@@ -108,13 +108,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            const Text("• Tracking happens only between 9:00 AM to 6:30 PM, Monday to Saturday.",
+            const Text("• Tracking happens only between 9:00 AM to 6:15 PM, Monday to Saturday.",
                 style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
             const Text("• No tracking on Sunday.", style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
             const Text(
-              "• You can disable tracking anytime between 9:00 AM and 6:30 PM on valid days.",
+              "• You can disable tracking anytime between 8:45 AM and 6:15 PM on valid days.",
               style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
             const Text(

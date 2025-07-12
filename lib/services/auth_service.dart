@@ -17,7 +17,7 @@ class AuthService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'email': email,
+          'userId': email,
           'password': password,
         }),
       );
@@ -27,7 +27,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('✅ Login successful. Token: ${data['token']}');
+        // print('✅ Login successful. Token: ${data['token']}');
         return {
           'token': data['token'],
           'user': data['user'],

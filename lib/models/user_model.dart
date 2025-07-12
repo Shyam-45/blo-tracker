@@ -1,35 +1,92 @@
 class UserModel {
   final String name;
-  final String email;
-  final String? phone;
+  final String userId;
+  final String designation;
+  final String officerType;
+  final String mobile;
+  final String boothNumber;
+  final String boothName;
 
   UserModel({
     required this.name,
-    required this.email,
-    this.phone,
+    required this.userId,
+    required this.designation,
+    required this.officerType,
+    required this.mobile,
+    required this.boothNumber,
+    required this.boothName,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       name: json['name'],
-      email: json['email'],
-      phone: json['phone'],
+      userId: json['userId'],
+      designation: json['designation'],
+      officerType: json['officerType'],
+      mobile: json['mobile'],
+      boothNumber: json['boothNumber'],
+      boothName: json['boothName'],
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'email': email,
-      'phone': phone,
+      'userId': userId,
+      'designation': designation,
+      'officerType': officerType,
+      'mobile': mobile,
+      'boothNumber': boothNumber,
+      'boothName': boothName,
     };
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       name: map['name'],
-      email: map['email'],
-      phone: map['phone'],
+      userId: map['userId'],
+      designation: map['designation'],
+      officerType: map['officerType'],
+      mobile: map['mobile'],
+      boothNumber: map['boothNumber'],
+      boothName: map['boothName'],
     );
   }
 }
+
+
+// class UserModel {
+//   final String name;
+//   final String email;
+//   final String? phone;
+
+//   UserModel({
+//     required this.name,
+//     required this.email,
+//     this.phone,
+//   });
+
+//   factory UserModel.fromJson(Map<String, dynamic> json) {
+//     return UserModel(
+//       name: json['name'],
+//       email: json['email'],
+//       phone: json['phone'],
+//     );
+//   }
+
+//   Map<String, dynamic> toMap() {
+//     return {
+//       'name': name,
+//       'email': email,
+//       'phone': phone,
+//     };
+//   }
+
+//   factory UserModel.fromMap(Map<String, dynamic> map) {
+//     return UserModel(
+//       name: map['name'],
+//       email: map['email'],
+//       phone: map['phone'],
+//     );
+//   }
+// }
