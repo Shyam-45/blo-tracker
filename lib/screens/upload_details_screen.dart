@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:blo_tracker/providers/app_state_provider.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:intl/intl.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:blo_tracker/providers/location_provider.dart';
 
 class UploadDetailsScreen extends ConsumerStatefulWidget {
